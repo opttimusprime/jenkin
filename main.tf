@@ -98,7 +98,7 @@ resource "aws_security_group" "jenkins_agent" {
 
 resource "aws_instance" "jenkins_controller" {
   ami                    = data.aws_ami.amazon_linux_2023.id
-  instance_type          = "t3.medium"
+  instance_type          = "c7i-flex.large"
   subnet_id              = data.terraform_remote_state.roboshop_vpc.outputs.private_subnet_ids[0]
   vpc_security_group_ids = [aws_security_group.jenkins_controller.id]
   key_name               = var.key_name
@@ -129,7 +129,7 @@ resource "aws_instance" "jenkins_controller" {
 
 resource "aws_instance" "jenkins_agent" {
   ami                    = data.aws_ami.amazon_linux_2023.id
-  instance_type          = "t3.medium"
+  instance_type          = "c7i-flex.large"
   subnet_id              = data.terraform_remote_state.roboshop_vpc.outputs.private_subnet_ids[1]
   vpc_security_group_ids = [aws_security_group.jenkins_agent.id]
   key_name               = var.key_name
