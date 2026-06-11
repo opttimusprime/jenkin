@@ -27,30 +27,6 @@ resource "aws_security_group" "jenkins_controller" {
   description = "Jenkins controller security group"
   vpc_id      = data.terraform_remote_state.roboshop_vpc.outputs.vpc_id
 
-  ingress {
-    description     = "Jenkins UI from ALB"
-    from_port       = 8080
-    to_port         = 8080
-    protocol        = "tcp"
-    security_groups = [aws_security_group.alb.id]
-  }
-
-  ingress {
-    description     = "SSH from Jenkins agent"
-    from_port       = 22
-    to_port         = 22
-    protocol        = "tcp"
-    security_groups = [aws_security_group.jenkins_agent.id]
-  }
-
-  ingress {
-    description     = "Jenkins agent communication"
-    from_port       = 50000
-    to_port         = 50000
-    protocol        = "tcp"
-    security_groups = [aws_security_group.jenkins_agent.id]
-  }
-
   egress {
     from_port   = 0
     to_port     = 0
@@ -67,14 +43,6 @@ resource "aws_security_group" "jenkins_agent" {
   name        = "${var.project}-${var.environment}-jenkins-agent-sg"
   description = "Jenkins agent security group"
   vpc_id      = data.terraform_remote_state.roboshop_vpc.outputs.vpc_id
-
-  ingress {
-    description     = "SSH from Jenkins controller"
-    from_port       = 22
-    to_port         = 22
-    protocol        = "tcp"
-    security_groups = [aws_security_group.jenkins_controller.id]
-  }
 
   ingress {
     description = "SSH from my IP"
@@ -96,10 +64,50 @@ resource "aws_security_group" "jenkins_agent" {
   }
 }
 
+resource "aws_security_group_rule" "alb_to_controller_8080" {
+  type                     = "ingress"
+  description              = "Jenkins UI from ALB"
+  from_port                = 8080
+  to_port                  = 8080
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.jenkins_controller.id
+  source_security_group_id = aws_security_group.alb.id
+}
+
+resource "aws_security_group_rule" "agent_to_controller_ssh" {
+  type                     = "ingress"
+  description              = "SSH from Jenkins agent"
+  from_port                = 22
+  to_port                  = 22
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.jenkins_controller.id
+  source_security_group_id = aws_security_group.jenkins_agent.id
+}
+
+resource "aws_security_group_rule" "agent_to_controller_jnlp" {
+  type                     = "ingress"
+  description              = "Jenkins agent communication"
+  from_port                = 50000
+  to_port                  = 50000
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.jenkins_controller.id
+  source_security_group_id = aws_security_group.jenkins_agent.id
+}
+
+resource "aws_security_group_rule" "controller_to_agent_ssh" {
+  type                     = "ingress"
+  description              = "SSH from Jenkins controller"
+  from_port                = 22
+  to_port                  = 22
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.jenkins_agent.id
+  source_security_group_id = aws_security_group.jenkins_controller.id
+}
+
 resource "aws_instance" "jenkins_controller" {
   ami                    = data.aws_ami.amazon_linux_2023.id
   instance_type          = "c7i-flex.large"
-  subnet_id              = data.terraform_remote_state.roboshop_vpc.outputs.private_subnet_ids[0]
+  subnet_id              = data.terraform_remote_state.roboshop_vpc.outputs.private_subnets[0]
   vpc_security_group_ids = [aws_security_group.jenkins_controller.id]
   key_name               = var.key_name
   iam_instance_profile   = aws_iam_instance_profile.jenkins.name
@@ -130,7 +138,7 @@ resource "aws_instance" "jenkins_controller" {
 resource "aws_instance" "jenkins_agent" {
   ami                    = data.aws_ami.amazon_linux_2023.id
   instance_type          = "c7i-flex.large"
-  subnet_id              = data.terraform_remote_state.roboshop_vpc.outputs.private_subnet_ids[1]
+  subnet_id              = data.terraform_remote_state.roboshop_vpc.outputs.private_subnets[1]
   vpc_security_group_ids = [aws_security_group.jenkins_agent.id]
   key_name               = var.key_name
   iam_instance_profile   = aws_iam_instance_profile.jenkins.name
@@ -162,7 +170,7 @@ resource "aws_lb" "jenkins" {
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb.id]
-  subnets            = data.terraform_remote_state.roboshop_vpc.outputs.public_subnet_ids
+  subnets            = data.terraform_remote_state.roboshop_vpc.outputs.public_subnets
 
   tags = {
     Name = "${var.project}-${var.environment}-jenkins-alb"
