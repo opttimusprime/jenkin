@@ -2,7 +2,10 @@
 set -e
 
 dnf update -y
-dnf install -y java-21-amazon-corretto git docker maven nodejs npm unzip wget tar gzip jq libatomic awscli
+dnf install -y java-21-amazon-corretto amazon-ssm-agent git docker maven nodejs npm unzip wget tar gzip jq libatomic awscli
+
+systemctl enable amazon-ssm-agent
+systemctl start amazon-ssm-agent
 
 systemctl enable docker
 systemctl start docker

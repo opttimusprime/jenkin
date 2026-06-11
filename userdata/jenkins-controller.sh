@@ -2,7 +2,10 @@
 set -e
 
 dnf update -y
-dnf install -y java-21-amazon-corretto git wget docker awscli
+dnf install -y java-21-amazon-corretto git wget docker awscli amazon-ssm-agent
+
+systemctl enable amazon-ssm-agent
+systemctl start amazon-ssm-agent
 
 systemctl enable docker
 systemctl start docker
