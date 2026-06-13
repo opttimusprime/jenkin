@@ -55,3 +55,10 @@ gpgkey=https://aquasecurity.github.io/trivy-repo/rpm/public.key
 EOF
 
 dnf install -y trivy
+
+trivy --version
+docker --version
+java --version
+mvn --version
+node --version
+npm --version
