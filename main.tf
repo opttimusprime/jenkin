@@ -4,8 +4,17 @@ resource "aws_security_group" "alb" {
   vpc_id      = data.terraform_remote_state.roboshop_vpc.outputs.vpc_id
 
   ingress {
+    description = "HTTP from my IP"
     from_port   = 80
     to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = [var.my_ip_cidr]
+  }
+
+  ingress {
+    description = "HTTPS from my IP"
+    from_port   = 443
+    to_port     = 443
     protocol    = "tcp"
     cidr_blocks = [var.my_ip_cidr]
   }
@@ -204,10 +213,28 @@ resource "aws_lb_target_group_attachment" "jenkins" {
   port             = 8080
 }
 
-resource "aws_lb_listener" "jenkins" {
+resource "aws_lb_listener" "jenkins_http" {
   load_balancer_arn = aws_lb.jenkins.arn
   port              = 80
   protocol          = "HTTP"
+
+  default_action {
+    type = "redirect"
+
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
+  }
+}
+
+resource "aws_lb_listener" "jenkins_https" {
+  load_balancer_arn = aws_lb.jenkins.arn
+  port              = 443
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+  certificate_arn   = "arn:aws:acm:us-east-1:942548380129:certificate/04035cfa-147e-46be-aca6-93361d8a3c0b"
 
   default_action {
     type             = "forward"
