@@ -73,6 +73,16 @@ resource "aws_security_group" "jenkins_agent" {
   }
 }
 
+resource "aws_security_group_rule" "k8s_workstation_to_controller_ssh" {
+  type                     = "ingress"
+  description              = "SSH from k8s workstation"
+  from_port                = 22
+  to_port                  = 22
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.jenkins_controller.id
+  source_security_group_id = data.terraform_remote_state.k8s_workstation.outputs.k8s_workstation_security_group_id
+}
+
 resource "aws_security_group_rule" "alb_to_controller_8080" {
   type                     = "ingress"
   description              = "Jenkins UI from ALB"
